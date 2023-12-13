@@ -10,10 +10,10 @@ type ConsoleProg struct {
 	name        string
 	total       float64
 	cur         float64
-	prog        []string
-	doneS       string // 已完成的进度字符
-	blankS      string // 未完成的进度字符
-	fps         uint8  // 进度条的刷新频率
+	prog        []byte
+	doneS       byte  // 已完成的进度字符
+	blankS      byte  // 未完成的进度字符
+	fps         uint8 // 进度条的刷新频率
 	dataChan    chan float64
 	dataStopCB  utils.CloseCB
 	printStopCB utils.CloseCB
@@ -26,9 +26,9 @@ func CreateConsoleProg(name string, total float64, opts ...ConsoleProgOption) *C
 		total:       total,
 		cur:         0,
 		dataChan:    make(chan float64, 1000),
-		prog:        make([]string, 100),
-		doneS:       "#",
-		blankS:      "_",
+		prog:        make([]byte, 100),
+		doneS:       '#',
+		blankS:      '_',
 		fps:         20,
 		dataStopCB:  utils.NewStopCB(),
 		printStopCB: utils.NewStopCB(),
@@ -70,12 +70,19 @@ func (prog *ConsoleProg) runPrint() {
 func (prog *ConsoleProg) print() {
 	percent := prog.cur / prog.total
 	ids := int(percent * float64(len(prog.prog)))
-	for i := 0; i < len(prog.prog); i++ {
-		if ids > 0 && i <= ids {
+	if ids <= len(prog.prog) {
+		for i := ids - 1; i >= 0; i-- {
+			if prog.prog[i] == prog.doneS {
+				break
+			}
 			prog.prog[i] = prog.doneS
-		} else {
-			prog.prog[i] = prog.blankS
 		}
+	}
+	for i := ids; i < len(prog.prog); i++ {
+		if prog.prog[i] == prog.blankS {
+			break
+		}
+		prog.prog[i] = prog.blankS
 	}
 
 	fmt.Printf("\r[%s]%.2f/%.2f [cost]%s", prog.prog, prog.cur, prog.total, time.Since(prog.begin).String())
